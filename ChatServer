@@ -1,0 +1,113 @@
+package com.lics.chat;
+
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.EOFException;
+import java.io.IOException;
+import java.net.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
+public class ChatServer {
+	ServerSocket ss = null; // 鏈嶅姟鍣ㄧ殑鐨勫鎺ュ瓧锛岀敤浜庣洃鍚潵鑷鎴风鐨勮繛鎺ヨ姹�
+	boolean started = false;
+
+	List<Client> clients = new ArrayList<Client>();// 缁存姢涓�涓鎴风閾捐〃锛岀敤浜庤褰曞凡缁忚繛鎺ヤ笂鏈嶅姟绔殑瀹㈡埛绔滑
+	/* 涓荤▼搴� */
+
+	public static void main(String[] args) {
+		new ChatServer().start(); // 璋冪敤鏈被鐨剆tart()鏂规硶銆傚洜涓烘湇鍔＄鐨勬搷浣滃湪 start()鏂规硶涓��
+	}
+
+	/* 鏈嶅姟绔殑鎿嶄綔 */
+	public void start() {
+		try {
+			ss = new ServerSocket(8888); // 鎸囧畾鏈嶅姟绔鎺ュ瓧鐨勭鍙ｅ彿涓�8888(鍙互浠绘剰鎸囧畾锛屼絾蹇呴』澶т簬1024)
+			started = true;
+
+		} catch (BindException e) { // 鑻ユ崟鎹夊埌姝ゅ紓甯革紝琛ㄦ槑鎸囧畾鐨勭鍙ｅ彿宸茬粡琚崰鐢ㄤ簡
+			System.out.println("绔彛浣跨敤涓�..璇烽噸鏂板惎鍔ㄧ▼搴�");
+			System.exit(0); // 绋嬪簭閫�鍑�
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		try {
+			while (started) {
+				Socket s = ss.accept(); // 鍒涘缓涓�涓敤浜庣鐞嗗鎴风杩炴帴鐨勫鎴风濂楁帴瀛椼�傛瘡褰撴湁鏂扮殑瀹㈡埛绔繛鎺ワ紝鏈嶅姟绔氨鏂板缓涓�涓鎺ュ瓧缁欐瀹㈡埛绔�
+				Client c = new Client(s);// 姣忓綋涓�涓鎴风杩炰笂鏈嶅姟绔紝灏辨柊寤轰竴涓狢lient绫伙紝鎸囦唬姝ゅ鎴风锛屽苟浼犲叆瀹㈡埛绔鎺ュ瓧
+
+				new Thread(c).start(); // 鏂板缓涓�涓瓙绾跨▼锛屽苟鍚姩瀹�
+				clients.add(c); // 鎶奀lient瀵硅薄鍔犲叆鍒板鎴风鍒楄〃涓�
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				ss.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+
+	}
+
+	/* Client绫诲疄鐜癛unnable鎺ュ彛锛屼负涓�涓嚎绋嬬被銆� */
+	class Client implements Runnable {
+		Socket s = null; // 瀹㈡埛绔鎺ュ瓧鐨勫紩鐢�
+		DataInputStream dis = null; // 杈撳叆娴佺殑寮曠敤
+		DataOutputStream dos = null; // 杈撳嚭娴佺殑寮曠敤
+		boolean bConnected = false; // 鏈嶅姟绔槸鍚﹀凡缁忚幏鍙栧鎴风鐨勮緭鍏ユ祦锛岃緭鍑烘祦
+
+		public Client(Socket s) { // Client绫荤殑甯﹀弬鏋勯�犲嚱鏁�
+			this.s = s; // Client绫讳腑鐨勫鎴风濂楁帴瀛楀紩鐢ㄦ寚鍚� 浼犲叆鐨勫鎴风濂楁帴瀛�
+			try {
+				dis = new DataInputStream(s.getInputStream()); // getInoutStream()鐢ㄤ簬鑾峰彇瀹㈡埛绔鎺ュ瓧鑷甫鐨勮緭鍏ユ祦
+				dos = new DataOutputStream(s.getOutputStream());// getOutoutStream()鐢ㄤ簬鑾峰彇瀹㈡埛绔鎺ュ瓧鑷甫鐨勮緭鍑烘祦
+				bConnected = true; // 鎴愬姛鑾峰彇瀹㈡埛绔殑杈撳叆娴侊紝杈撳嚭娴佸悗锛屾妸bConnected璁剧疆涓簍rue
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+
+		/* 鐢ㄤ簬鍚戝鎴风鍙戦�佷俊鎭� */
+		public void send(String str) {
+			try {
+				dos.writeUTF(str);// 鍚戣緭鍏ユ祦鍙戦�佷俊鎭�
+			} catch (IOException e) { // 褰撴Client瀵硅薄鍑虹幇寮傚父锛屾妸姝lient浠庡鎴风鍒楄〃clients涓垹闄�
+				clients.remove(s);
+			}
+		}
+
+		/* Client绾跨▼鐨勬搷浣� */
+		public void run() {
+			String str = null;
+			try {
+				while (bConnected) { // 褰撴垚鍔熻幏鍙栧鎴风鐨� 杈撳叆娴侊紝杈撳嚭娴佸悗銆�
+					str = dis.readUTF(); // 浠庤緭鍏ユ祦璇诲彇鏉ヨ嚜瀹㈡埛绔殑淇℃伅
+					// System.out.println(str);
+					for (int i = 0; i < clients.size(); i++) { // 浠庝竴涓鎴风涓幏鍙栦俊鎭悗锛屽彂姝や俊鎭彂閫佺粰宸茬粡杩炴帴涓婃湇鍔＄鐨勫叾浠栧鎴风
+						Client c = clients.get(i); // 鐢ㄥ垪琛ㄥ簭鍙锋潵鑾峰彇瀵瑰簲鐨勫鎴风
+						c.send(str); // 鍚戜互搴忓彿閬嶅巻鐨勫鎴风鍙戦�佷俊鎭�
+					}
+				}
+			} catch (EOFException e) { // 鐢变簬瀹㈡埛绔叧闂簡鐨勬椂鍊欙紝鏈嶅姟绔笉鑳戒粠娴佷腑璇诲彇淇℃伅锛屽氨浼氭姤姝ゅ紓甯搞�傝〃绀哄鎴风鍏抽棴浜�
+				System.out.println("Clinet closed!");
+			} catch (IOException e) {
+				e.printStackTrace();
+			} finally {
+				try {
+					if (s != null)
+						s.close(); // 鍏抽棴瀹㈡埛绔鎺ュ瓧
+					if (dos != null)
+						dos.close();// 鍏抽棴姝ゅ鎴风鐨勮緭鍑烘祦
+					if (dis != null)
+						dis.close();// 鍏抽棴姝ゅ鎴风鐨勮緭鍏ユ祦
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+}
