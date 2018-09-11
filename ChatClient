@@ -1,0 +1,112 @@
+package com.lics.chat;
+
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.Socket;
+import java.net.UnknownHostException;
+
+public class ChatClient extends Frame { // 缁ф壙Frame绫伙紝鐢ㄤ簬缁機hatClient绫诲垱寤虹晫闈�
+
+	Socket s = null; // 鐢ㄤ簬杩炴帴鏈嶅姟绔殑濂楁帴瀛�
+	DataInputStream dis = null; // 鐢ㄤ簬鑾峰彇鏉ヨ嚜鏈嶅姟绔殑淇℃伅鐨勮緭鍏ユ祦
+	DataOutputStream dos = null; // 鐢ㄤ簬鍚戞湇鍔＄鍙戦�佷俊鎭殑杈撳嚭娴�
+	boolean bConnected = false; // 杩炴帴鏈嶅姟绔殑鏍囧織浣�
+
+	TextField tfTxt = new TextField(); // 鍒涘缓涓�涓枃鏈锛堟斁鍦ㄧ晫闈腑锛�
+	TextArea taContent = new TextArea();// 鍒涘缓涓�涓秷鎭(鏀惧湪鐣岄潰涓�)
+
+	public static void main(String[] args) { // 涓诲嚱鏁�
+		new ChatClient().lauchFrame(); // lauchFrame()鐢ㄤ簬璁剧疆鐣岄潰甯冨眬
+
+	}
+
+	/* 璁剧疆鐣岄潰甯冨眬 */
+	public void lauchFrame() {
+		this.setLocation(400, 300); // 鐣岄潰鍦ㄧ數鑴戝睆骞曚腑鐨勬樉绀轰綅缃�
+		this.setSize(300, 300); // 鐣岄潰澶у皬(闀匡紝瀹�)
+		add(tfTxt, BorderLayout.SOUTH); // 鎶婂凡鍒涘缓鐨勬枃鏈鍔犲叆鍒扮晫闈腑鐨勫崡鏂�(鍗充笅鏂�)
+		add(taContent, BorderLayout.NORTH); // 鎶婂凡鍒涘缓鐨勬秷鎭鍔犲叆鍒扮晫闈腑鐨勫寳鏂�(鍗充笂鏂�)
+		this.addWindowListener(new WindowAdapter() { // 鍔犲叆window鐩戝惉鍣ㄥ埌鐣岄潰涓�
+			public void windowClosing(WindowEvent e) { // 褰撻紶鏍囩偣鍑诲彸涓婅鐨�'X'鏃讹紝浼氳嚜鍔ㄨ皟鐢╳indowClosing()
+				disconnect(); // 璋冪敤disconnect()鍑芥暟锛岀敤浜庢柇寮�涓庢湇鍔＄鐨勮繛鎺�
+				System.exit(0); // 绋嬪簭閫�鍑�
+			}
+		});
+		pack(); // 灏嗙晫闈笂鐨勬帶浠朵綅缃嚜閫傚簲鏀惧ソ
+		tfTxt.addActionListener(new TFListener()); // 鍔犲叆Action鐩戝惉鍣ㄥ埌鏂囨湰妗嗕腑
+		setVisible(true); // 浣跨晫闈㈡樉绀哄嚭鏉�
+		connect(); // 璋冪敤connect()锛岀敤浜庤繛鎺ユ湇鍔＄
+		new Thread(new RecvThread()).start(); // 鍒涘缓涓�涓柊绾跨▼锛岀敤浜庢帴鏀舵潵鑷湇鍔＄鐨勪俊鎭�
+	}
+
+	/* 鐢ㄤ簬杩炴帴鏈嶅姟绔� */
+	public void connect() {
+		try {
+			s = new Socket("127.0.0.1", 8888); // 鍒涘缓濂楁帴瀛楀璞★紝绗竴涓弬鏁颁负鏈嶅姟绔墍鍦ㄧ殑ip鍦板潃锛屽悗涓�涓弬鏁颁负鏈嶅姟绔殑绔彛鍙�
+			dis = new DataInputStream(s.getInputStream()); // 鍒涘缓杈撳叆娴侊紝鐢ㄤ簬鎺ユ敹鏈嶅姟绔殑淇℃伅
+			dos = new DataOutputStream(s.getOutputStream()); // 鍒涘缓杈撳嚭娴侊紝鐢ㄤ簬鍚戞湇鍔＄鍙戦�佷俊鎭�
+			bConnected = true; // 璁剧疆 杩炴帴鏈嶅姟绔殑鏍囧織浣� 涓虹湡
+
+			System.out.println("Client connected!");
+		} catch (UnknownHostException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	/* 褰撹鏂紑涓庢湇鍔＄鐨勮繛鎺ユ椂锛屼綔涓�浜涘鐞� */
+	public void disconnect() {
+		try {
+			dos.close(); // 鏂紑杈撳嚭娴�
+			dis.close(); // 鏂紑杈撳叆娴�
+			s.close(); // 鏂紑濂楁帴瀛�
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+	}
+
+	/* 鑷畾涔堿ction鐩戝惉鍣ㄧ殑鍐呭 */
+	private class TFListener implements ActionListener {
+		public void actionPerformed(ActionEvent e) {// 瀹炵幇ActionListener鎺ュ彛涓殑actionPerformed()鏂规硶
+			String str = tfTxt.getText().trim(); // 褰撴寜涓嬪洖杞﹀悗锛岃幏鍙栨枃鏈涓殑淇℃伅銆倀rim()鐢ㄤ簬娑堥櫎鏂囨湰淇℃伅鍓嶉潰鍜屽悗灏剧殑绌烘牸
+			tfTxt.setText(""); // (鍙戦�佷俊鎭悗)鎶婃枃鏈缃┖銆�
+
+			try {
+				dos.writeUTF(str); // 寰�杈撳嚭娴佸啓鏁版嵁(鐢ㄤ簬鍙戜俊鎭粰鏈嶅姟绔�)
+				dos.flush(); // 寮哄埗鎶婃祦缂撳啿鍖洪噷鐨勪俊鎭彂鍑哄幓銆傦紙鍚﹀垯绯荤粺浼氱瓑鍒扮紦鍐插尯婊′簡浠ュ悗鎵嶄細鍙戝嚭鍘伙級
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+		}
+	}
+
+	/* 鑷畾涔夌敤浜庢帴鏀舵潵鑷湇鍔＄鐨勪俊鎭殑瀛愮嚎绋� */
+	private class RecvThread implements Runnable {
+
+		@Override
+		public void run() { // 瀛愮嚎绋嬪伐浣滅殑鍐呭閮藉啓鍦� Runnable鎺ュ彛鐨� run()鏂规硶閲�
+			try {
+				while (bConnected) { // 褰揵Connected 涓簍rue鏃讹紝琛ㄧず瀹㈡埛绔繛鎺ユ湇鍔＄鎴愬姛
+					String str = dis.readUTF(); // 浠庤緭鍏ユ祦涓幏鍙栨潵鑷湇鍔＄鐨勪俊鎭�
+					taContent.setText(taContent.getText() + str + '\n'); // 鎶婃潵鑷湇鍔＄鐨勪俊鎭姞涓婃秷鎭浠ュ墠鐨勪俊鎭竴璧峰湪娑堟伅妗嗕腑鎵撳嵃鍑烘潵
+					// System.out.println(str);
+				}
+			} catch (IOException e) { // 褰撳嚭鐜癐O寮傚父鏃讹紝寰堝彲鑳芥槸鍥犱负瀹㈡埛绔▼搴忚鐢ㄦ埛鍏抽棴浜嗭紝姝ゆ椂鎵撳嵃鈥渃lient close鈥�
+				System.out.println("client close!");
+			}
+
+		}
+
+	}
+
+}
