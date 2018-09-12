@@ -11,47 +11,47 @@ import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
-public class ChatClient extends Frame { // 缁ф壙Frame绫伙紝鐢ㄤ簬缁機hatClient绫诲垱寤虹晫闈�
+public class ChatClient extends Frame { // 继承Frame类，用于给ChatClient类创建界面
 
-	Socket s = null; // 鐢ㄤ簬杩炴帴鏈嶅姟绔殑濂楁帴瀛�
-	DataInputStream dis = null; // 鐢ㄤ簬鑾峰彇鏉ヨ嚜鏈嶅姟绔殑淇℃伅鐨勮緭鍏ユ祦
-	DataOutputStream dos = null; // 鐢ㄤ簬鍚戞湇鍔＄鍙戦�佷俊鎭殑杈撳嚭娴�
-	boolean bConnected = false; // 杩炴帴鏈嶅姟绔殑鏍囧織浣�
+	Socket s = null; // 用于连接服务端的套接字
+	DataInputStream dis = null; // 用于获取来自服务端的信息的输入流
+	DataOutputStream dos = null; // 用于向服务端发送信息的输出流
+	boolean bConnected = false; // 连接服务端的标志位
 
-	TextField tfTxt = new TextField(); // 鍒涘缓涓�涓枃鏈锛堟斁鍦ㄧ晫闈腑锛�
-	TextArea taContent = new TextArea();// 鍒涘缓涓�涓秷鎭(鏀惧湪鐣岄潰涓�)
+	TextField tfTxt = new TextField(); // 创建一个文本框（放在界面中）
+	TextArea taContent = new TextArea();// 创建一个消息框(放在界面中)
 
-	public static void main(String[] args) { // 涓诲嚱鏁�
-		new ChatClient().lauchFrame(); // lauchFrame()鐢ㄤ簬璁剧疆鐣岄潰甯冨眬
+	public static void main(String[] args) { // 主函数
+		new ChatClient().lauchFrame(); // lauchFrame()用于设置界面布局
 
 	}
 
-	/* 璁剧疆鐣岄潰甯冨眬 */
+	/* 设置界面布局 */
 	public void lauchFrame() {
-		this.setLocation(400, 300); // 鐣岄潰鍦ㄧ數鑴戝睆骞曚腑鐨勬樉绀轰綅缃�
-		this.setSize(300, 300); // 鐣岄潰澶у皬(闀匡紝瀹�)
-		add(tfTxt, BorderLayout.SOUTH); // 鎶婂凡鍒涘缓鐨勬枃鏈鍔犲叆鍒扮晫闈腑鐨勫崡鏂�(鍗充笅鏂�)
-		add(taContent, BorderLayout.NORTH); // 鎶婂凡鍒涘缓鐨勬秷鎭鍔犲叆鍒扮晫闈腑鐨勫寳鏂�(鍗充笂鏂�)
-		this.addWindowListener(new WindowAdapter() { // 鍔犲叆window鐩戝惉鍣ㄥ埌鐣岄潰涓�
-			public void windowClosing(WindowEvent e) { // 褰撻紶鏍囩偣鍑诲彸涓婅鐨�'X'鏃讹紝浼氳嚜鍔ㄨ皟鐢╳indowClosing()
-				disconnect(); // 璋冪敤disconnect()鍑芥暟锛岀敤浜庢柇寮�涓庢湇鍔＄鐨勮繛鎺�
-				System.exit(0); // 绋嬪簭閫�鍑�
+		this.setLocation(400, 300); // 界面在电脑屏幕中的显示位置
+		this.setSize(300, 300); // 界面大小(长，宽)
+		add(tfTxt, BorderLayout.SOUTH); // 把已创建的文本框加入到界面中的南方(即下方)
+		add(taContent, BorderLayout.NORTH); // 把已创建的消息框加入到界面中的北方(即上方)
+		this.addWindowListener(new WindowAdapter() { // 加入window监听器到界面中
+			public void windowClosing(WindowEvent e) { // 当鼠标点击右上角的'X'时，会自动调用windowClosing()
+				disconnect(); // 调用disconnect()函数，用于断开与服务端的连接
+				System.exit(0); // 程序退出
 			}
 		});
-		pack(); // 灏嗙晫闈笂鐨勬帶浠朵綅缃嚜閫傚簲鏀惧ソ
-		tfTxt.addActionListener(new TFListener()); // 鍔犲叆Action鐩戝惉鍣ㄥ埌鏂囨湰妗嗕腑
-		setVisible(true); // 浣跨晫闈㈡樉绀哄嚭鏉�
-		connect(); // 璋冪敤connect()锛岀敤浜庤繛鎺ユ湇鍔＄
-		new Thread(new RecvThread()).start(); // 鍒涘缓涓�涓柊绾跨▼锛岀敤浜庢帴鏀舵潵鑷湇鍔＄鐨勪俊鎭�
+		pack(); // 将界面上的控件位置自适应放好
+		tfTxt.addActionListener(new TFListener()); // 加入Action监听器到文本框中
+		setVisible(true); // 使界面显示出来
+		connect(); // 调用connect()，用于连接服务端
+		new Thread(new RecvThread()).start(); // 创建一个新线程，用于接收来自服务端的信息
 	}
 
-	/* 鐢ㄤ簬杩炴帴鏈嶅姟绔� */
+	/* 用于连接服务端 */
 	public void connect() {
 		try {
-			s = new Socket("127.0.0.1", 8888); // 鍒涘缓濂楁帴瀛楀璞★紝绗竴涓弬鏁颁负鏈嶅姟绔墍鍦ㄧ殑ip鍦板潃锛屽悗涓�涓弬鏁颁负鏈嶅姟绔殑绔彛鍙�
-			dis = new DataInputStream(s.getInputStream()); // 鍒涘缓杈撳叆娴侊紝鐢ㄤ簬鎺ユ敹鏈嶅姟绔殑淇℃伅
-			dos = new DataOutputStream(s.getOutputStream()); // 鍒涘缓杈撳嚭娴侊紝鐢ㄤ簬鍚戞湇鍔＄鍙戦�佷俊鎭�
-			bConnected = true; // 璁剧疆 杩炴帴鏈嶅姟绔殑鏍囧織浣� 涓虹湡
+			s = new Socket("127.0.0.1", 8888); // 创建套接字对象，第一个参数为服务端所在的ip地址，后一个参数为服务端的端口号
+			dis = new DataInputStream(s.getInputStream()); // 创建输入流，用于接收服务端的信息
+			dos = new DataOutputStream(s.getOutputStream()); // 创建输出流，用于向服务端发送信息
+			bConnected = true; // 设置 连接服务端的标志位 为真
 
 			System.out.println("Client connected!");
 		} catch (UnknownHostException e) {
@@ -61,12 +61,12 @@ public class ChatClient extends Frame { // 缁ф壙Frame绫伙紝鐢ㄤ簬缁機
 		}
 	}
 
-	/* 褰撹鏂紑涓庢湇鍔＄鐨勮繛鎺ユ椂锛屼綔涓�浜涘鐞� */
+	/* 当要断开与服务端的连接时，作一些处理 */
 	public void disconnect() {
 		try {
-			dos.close(); // 鏂紑杈撳嚭娴�
-			dis.close(); // 鏂紑杈撳叆娴�
-			s.close(); // 鏂紑濂楁帴瀛�
+			dos.close(); // 断开输出流
+			dis.close(); // 断开输入流
+			s.close(); // 断开套接字
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -74,15 +74,15 @@ public class ChatClient extends Frame { // 缁ф壙Frame绫伙紝鐢ㄤ簬缁機
 
 	}
 
-	/* 鑷畾涔堿ction鐩戝惉鍣ㄧ殑鍐呭 */
+	/* 自定义Action监听器的内容 */
 	private class TFListener implements ActionListener {
-		public void actionPerformed(ActionEvent e) {// 瀹炵幇ActionListener鎺ュ彛涓殑actionPerformed()鏂规硶
-			String str = tfTxt.getText().trim(); // 褰撴寜涓嬪洖杞﹀悗锛岃幏鍙栨枃鏈涓殑淇℃伅銆倀rim()鐢ㄤ簬娑堥櫎鏂囨湰淇℃伅鍓嶉潰鍜屽悗灏剧殑绌烘牸
-			tfTxt.setText(""); // (鍙戦�佷俊鎭悗)鎶婃枃鏈缃┖銆�
+		public void actionPerformed(ActionEvent e) {// 实现ActionListener接口中的actionPerformed()方法
+			String str = tfTxt.getText().trim(); // 当按下回车后，获取文本框中的信息。trim()用于消除文本信息前面和后尾的空格
+			tfTxt.setText(""); // (发送信息后)把文本框置空。
 
 			try {
-				dos.writeUTF(str); // 寰�杈撳嚭娴佸啓鏁版嵁(鐢ㄤ簬鍙戜俊鎭粰鏈嶅姟绔�)
-				dos.flush(); // 寮哄埗鎶婃祦缂撳啿鍖洪噷鐨勪俊鎭彂鍑哄幓銆傦紙鍚﹀垯绯荤粺浼氱瓑鍒扮紦鍐插尯婊′簡浠ュ悗鎵嶄細鍙戝嚭鍘伙級
+				dos.writeUTF(str); // 往输出流写数据(用于发信息给服务端)
+				dos.flush(); // 强制把流缓冲区里的信息发出去。（否则系统会等到缓冲区满了以后才会发出去）
 			} catch (IOException e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
@@ -90,18 +90,18 @@ public class ChatClient extends Frame { // 缁ф壙Frame绫伙紝鐢ㄤ簬缁機
 		}
 	}
 
-	/* 鑷畾涔夌敤浜庢帴鏀舵潵鑷湇鍔＄鐨勪俊鎭殑瀛愮嚎绋� */
+	/* 自定义用于接收来自服务端的信息的子线程 */
 	private class RecvThread implements Runnable {
 
 		@Override
-		public void run() { // 瀛愮嚎绋嬪伐浣滅殑鍐呭閮藉啓鍦� Runnable鎺ュ彛鐨� run()鏂规硶閲�
+		public void run() { // 子线程工作的内容都写在 Runnable接口的 run()方法里
 			try {
-				while (bConnected) { // 褰揵Connected 涓簍rue鏃讹紝琛ㄧず瀹㈡埛绔繛鎺ユ湇鍔＄鎴愬姛
-					String str = dis.readUTF(); // 浠庤緭鍏ユ祦涓幏鍙栨潵鑷湇鍔＄鐨勪俊鎭�
-					taContent.setText(taContent.getText() + str + '\n'); // 鎶婃潵鑷湇鍔＄鐨勪俊鎭姞涓婃秷鎭浠ュ墠鐨勪俊鎭竴璧峰湪娑堟伅妗嗕腑鎵撳嵃鍑烘潵
+				while (bConnected) { // 当bConnected 为true时，表示客户端连接服务端成功
+					String str = dis.readUTF(); // 从输入流中获取来自服务端的信息
+					taContent.setText(taContent.getText() + str + '\n'); // 把来自服务端的信息加上消息框以前的信息一起在消息框中打印出来
 					// System.out.println(str);
 				}
-			} catch (IOException e) { // 褰撳嚭鐜癐O寮傚父鏃讹紝寰堝彲鑳芥槸鍥犱负瀹㈡埛绔▼搴忚鐢ㄦ埛鍏抽棴浜嗭紝姝ゆ椂鎵撳嵃鈥渃lient close鈥�
+			} catch (IOException e) { // 当出现IO异常时，很可能是因为客户端程序被用户关闭了，此时打印“client close”
 				System.out.println("client close!");
 			}
 
